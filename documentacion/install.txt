@@ -7,11 +7,14 @@ SIGCENTER_PASSWORD=
 GETSOFT_USER=
 GETSOFT_PASSWORD=
 
-HEADLESS=true
+HEADLESS=false
 TIMEOUT=30000
 LOG_LEVEL=info
 
 ------------------------- comandos de instalación ------------------
+estas son als dependencias que use o voy a usar, puede usar:
+npm install 
+    ó
 npm install -D typescript
 npx tsc --init
 
