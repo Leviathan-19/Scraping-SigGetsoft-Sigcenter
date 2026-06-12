@@ -1,0 +1,489 @@
+# Propuesta de Arquitectura para la Automatización de Extracción de Datos de SigCenter y Getsoft (Versión Mejorada)
+
+## 1. Introducción
+
+El presente documento define una arquitectura modular para automatizar la extracción, procesamiento y consolidación de información proveniente de los sistemas SigCenter y Getsoft.
+
+La solución busca minimizar la intervención humana, reducir errores operativos y generar automáticamente archivos estructurados para su posterior análisis y utilización por usuarios técnicos y no técnicos.
+
+La arquitectura está diseñada bajo los principios de:
+
+* Modularidad.
+* Reutilización de componentes.
+* Facilidad de mantenimiento.
+* Bajo consumo de recursos.
+* Ejecución local.
+* Escalabilidad para futuros sistemas.
+
+---
+
+# 2. Arquitectura General
+
+La solución se divide en cinco capas principales:
+
+```
+Sistemas Externos
+│
+├── SigCenter
+└── Getsoft
+        │
+        ▼
+Scrapers Independientes
+        │
+        ▼
+Procesamiento y Normalización
+        │
+        ▼
+Generación de Reportes
+        │
+        ▼
+Almacenamiento Estructurado
+```
+
+Cada sistema tendrá su propio módulo de extracción, permitiendo mantener independencia entre cambios de interfaz o actualizaciones.
+
+---
+
+# 3. Capa de Automatización
+
+Se utilizará Playwright con TypeScript.
+
+Cada sistema tendrá su propio scraper:
+
+```
+src/
+
+scrapers/
+
+    sigcenter/
+
+    getsoft/
+```
+
+Cada scraper será responsable de:
+
+* Login.
+* Navegación.
+* Extracción.
+* Descargas.
+* Manejo de errores propios.
+
+Esto evita que modificaciones en un sistema afecten al otro.
+
+---
+
+# 4. Gestión Inteligente de Sesiones
+
+Para minimizar logins repetitivos y reducir tiempos de ejecución, Playwright almacenará las sesiones autenticadas.
+
+Estrategia:
+
+```
+Intentar reutilizar cookies
+
+↓
+
+Sesión válida
+
+↓
+
+Continuar extracción
+
+↓
+
+Sesión inválida
+
+↓
+
+Realizar login
+
+↓
+
+Guardar nueva sesión
+```
+
+Las sesiones se almacenarán en:
+
+```
+sessions/
+
+sigcenter.json
+
+getsoft.json
+```
+
+Esto reduce el riesgo de bloqueos por múltiples autenticaciones consecutivas.
+
+---
+
+# 5. Gestión de Configuración
+
+Se separará la configuración sensible de la configuración operativa.
+
+## Variables sensibles
+
+Archivo:
+
+.env
+
+```
+SIGCENTER_USER=
+
+SIGCENTER_PASSWORD=
+
+GETSOFT_USER=
+
+GETSOFT_PASSWORD=
+```
+
+## Configuración operativa
+
+Archivo:
+
+config.json
+
+Ejemplo:
+
+```
+{
+    "headless": true,
+    "retryAttempts": 3,
+    "timeout": 30000,
+    "delayBetweenPatients": 5000,
+    "downloadPath": "./downloads"
+}
+```
+
+Esto permite modificar parámetros sin alterar el código fuente.
+
+---
+
+# 6. Centralización de Selectores
+
+Los elementos HTML utilizados por Playwright estarán centralizados.
+
+```
+selectors/
+
+sigcenter.ts
+
+getsoft.ts
+```
+
+Si cambia la interfaz de un sistema, únicamente será necesario modificar los selectores correspondientes.
+
+---
+
+# 7. Gestión de Descargas
+
+Las descargas seguirán un flujo controlado:
+
+```
+Descarga
+
+↓
+
+Validación
+
+↓
+
+Procesamiento
+
+↓
+
+Almacenamiento
+
+↓
+
+Limpieza de temporales
+```
+
+Estructura:
+
+```
+downloads/
+
+tmp/
+
+processed/
+
+archive/
+```
+
+---
+
+# 8. Procesamiento y Normalización
+
+Los datos obtenidos desde SigCenter y Getsoft serán transformados a una estructura común antes de generar archivos.
+
+Esto permitirá:
+
+* Comparar información.
+* Consolidar datos.
+* Evitar inconsistencias.
+* Facilitar futuras integraciones.
+
+---
+
+# 9. Generación de Archivos
+
+Se utilizarán:
+
+ExcelJS
+
+Para archivos Excel.
+
+PDF-LIB
+
+Para reportes PDF.
+
+Los nombres de archivos serán normalizados para evitar caracteres inválidos.
+
+Ejemplo:
+
+```
+Jose_Perez_Reporte.xlsx
+
+Jose_Perez_Detalle.pdf
+```
+
+---
+
+# 10. Almacenamiento
+
+La estructura propuesta será:
+
+```
+data/
+
+└── AAAA-MM-DD/
+
+    ├── Cliente_A/
+
+    │   ├── Paciente_001.xlsx
+
+    │   └── Paciente_001.pdf
+
+    └── Cliente_B/
+```
+
+Se evitarán archivos duplicados mediante validaciones previas.
+
+---
+
+# 11. Registro y Monitoreo
+
+El sistema generará logs estructurados.
+
+```
+logs/
+
+app.log
+
+error.log
+```
+
+Niveles:
+
+INFO
+
+WARN
+
+ERROR
+
+DEBUG
+
+Además, ante errores se almacenarán capturas automáticas:
+
+```
+screenshots/
+
+error_20260610_101530.png
+```
+
+---
+
+# 12. Reportes de Ejecución
+
+Cada ejecución generará un resumen:
+
+* Fecha.
+* Hora inicio.
+* Hora fin.
+* Registros procesados.
+* Registros omitidos.
+* Errores.
+* Archivos generados.
+
+Los reportes podrán almacenarse en:
+
+```
+history/
+
+2026-06-10.json
+```
+
+---
+
+# 13. Manejo de Errores
+
+Se implementará un sistema de reintentos automáticos.
+
+Ejemplo:
+
+* Timeout.
+* Error de conexión.
+* Elemento no encontrado.
+* Descarga fallida.
+
+Cada operación crítica tendrá múltiples intentos antes de finalizar.
+
+---
+
+# 14. Seguridad
+
+Se implementarán las siguientes medidas:
+
+* Variables de entorno.
+* Nunca almacenar contraseñas en código.
+* Reutilización de sesiones.
+* Retrasos entre solicitudes.
+* Uso exclusivamente autorizado.
+* Validación de archivos descargados.
+
+---
+
+# 15. Estructura del Proyecto
+
+```
+project/
+
+src/
+
+    config/
+
+    scrapers/
+
+        sigcenter/
+
+        getsoft/
+
+    selectors/
+
+    services/
+
+    exports/
+
+    reports/
+
+    utils/
+
+    logs/
+
+    index.ts
+
+data/
+
+downloads/
+
+sessions/
+
+screenshots/
+
+archive/
+
+history/
+
+tests/
+
+.env
+
+.env.example
+
+.gitignore
+
+package.json
+
+tsconfig.json
+
+playwright.config.ts
+
+README.md
+```
+
+---
+
+# 16. Fases del Proyecto
+
+## Fase 0
+
+Preparación del entorno.
+
+* Node.js.
+* TypeScript.
+* Playwright.
+* Variables de entorno.
+* Configuración.
+* Logger.
+* Estructura de carpetas.
+* Scripts npm.
+
+## Fase 1
+
+Implementación del login y gestión de sesiones de SigCenter.
+
+## Fase 2
+
+Implementación del login y gestión de sesiones de Getsoft.
+
+## Fase 3
+
+Extracción modular de SigCenter.
+
+## Fase 4
+
+Extracción modular de Getsoft.
+
+## Fase 5
+
+Normalización y consolidación de datos.
+
+## Fase 6
+
+Generación de Excel y PDF.
+
+## Fase 7
+
+Organización automática del almacenamiento.
+
+## Fase 8
+
+Programación de tareas automáticas.
+
+## Fase 9
+
+Robustez, monitoreo y auditoría.
+
+---
+
+# 17. Consideraciones para Escalabilidad
+
+La arquitectura permitirá incorporar nuevos sistemas de extracción mediante nuevos módulos independientes.
+
+Ejemplo:
+
+```
+scrapers/
+
+sigcenter/
+
+getsoft/
+
+sistema3/
+
+sistema4/
+```
+
+Sin afectar el funcionamiento de los módulos existentes.
+
+Esto convierte la solución en una plataforma de automatización reutilizable y extensible para futuros proyectos de integración y extracción de datos.

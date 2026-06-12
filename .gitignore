@@ -1,0 +1,19 @@
+node_modules/
+.env
+.env.example
+sessions/
+downloads/
+screenshots/
+logs/
+history/
+archive/
+data/
+playwright-report/
+test-results/
+dist/
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

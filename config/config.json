@@ -1,0 +1,6 @@
+{
+    "retryAttempts": 3,
+    "headless": false,
+    "delay": 5000,
+    "downloadPath": "downloads"
+}
